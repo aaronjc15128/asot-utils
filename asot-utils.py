@@ -2,46 +2,60 @@ import requests
 from bs4 import BeautifulSoup
 import webbrowser
 import os
+import sys
 
-def getTracklist(episode_number):
-    episode_number = str(episode_number).strip()
-    url = f'https://miroppb.com/ASOT/{episode_number}'
-    response = requests.get(url)
-    html = response.text
-    tracklist_html = str(BeautifulSoup(html, 'html.parser').find(id='tracklist'))
+def tracklist(episode_number, repetitions):
+    i = 0
+    for _ in range(int(repetitions)):
+        epinum = int(str(episode_number).strip()) + i
+        url = f'https://miroppb.com/ASOT/{epinum}'
+        response = requests.get(url)
+        html = response.text
+        tracklist_html = str(BeautifulSoup(html, 'html.parser').find(id='tracklist'))
 
-    with open('temp.html', 'w', encoding='utf-8') as file:
-        file.write(tracklist_html)
+        with open('temp.html', 'w', encoding='utf-8') as file:
+            file.write(tracklist_html)
 
-    absolute_path = os.path.abspath('temp.html')
+        absolute_path = os.path.abspath('temp.html')
+        webbrowser.open(f'file://{absolute_path}', new=1)
 
-    webbrowser.open(f'file://{absolute_path}')
+        print(f'successful {epinum}')
 
-    return 'Successful'
+        i += 1
 
-def getDownload(episode_number):
-    episode_number = str(episode_number).strip()
-    if len(episode_number) == 1: episode_number = f'00{episode_number}'
-    elif len(episode_number) == 2: episode_number = f'0{episode_number}'
+def download(episode_number, repetitions):
+    i = 0
+    for _ in range(int(repetitions)):
+        epinum = int(str(episode_number).strip()) + i
+        if len(str(epinum)) == 1: epinum = f'00{epinum}'
+        elif len(str(epinum)) == 2: epinum = f'0{epinum}'
 
-    response = requests.get(f'http://71.29.110.134:9995/asot/ASOT_Ep_{episode_number}.mp3', stream=True)
-    
-    # Check if the request was successful (status code 200)
-    if response.status_code == 200:
-        # Open a file in binary write mode
-        with open(f'ASOT_Ep_{episode_number}', 'wb') as file:
-            # Write the contents of the response to the file
-            for chunk in response.iter_content(chunk_size=1024):
-                file.write(chunk)
-        return f"File downloaded successfully as 'ASOT_Ep_{episode_number}'"
-    else:
-        return f"Failed to download file. Status code: {response.status_code}"
+        response = requests.get(f'http://71.29.110.134:9995/asot/ASOT_Ep_{epinum}.mp3', stream=True)
 
+        if response.status_code == 200:
+            with open(f'ASOT_Ep_{epinum}.mp3', 'wb') as file:
+                for chunk in response.iter_content(chunk_size=1024):
+                    file.write(chunk)
+            print(f'successful {epinum}')
+        else:
+            print(f'failed {epinum}')
 
-epinum = input("Episode # : ")
-print("sending tracklist request")
-print(getTracklist(epinum))
-print("finished tracklist request")
-print("sending download request")
-print(getDownload(epinum))
-print("finished download request")
+        i += 1
+
+if __name__ =="__main__":
+    if len(sys.argv) != 4:
+        print("usage: python asot-utils.py function episode_number repetitions")
+        sys.exit(1)
+
+    function = sys.argv[1]
+    parameter = sys.argv[2]
+    repetitions = sys.argv[3]
+
+    #(globals()[function])(parameter, repetitions) # runs function as function(parameter, repetitions)
+
+    try:
+        (globals()[function])(parameter, repetitions) # runs function as function(parameter, repetitions)
+    except:
+        print("invalid!")
+
+    input()
